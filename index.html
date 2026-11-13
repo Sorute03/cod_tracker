@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoD Stats & Analytics Tracker - Master Edition</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --danger: #f43f5e;
+            --success: #10b981;
+            --party-color: #10b981;
+            --random-color: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; line-height: 1.5; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); padding-bottom: 16px; }
+        h1 { font-size: 1.5rem; color: var(--accent); }
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        button { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--card-border); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+        button:hover { background: var(--card-border); }
+        .btn-accent { background: var(--accent); color: #0f172a; font-weight: bold; border: none; }
+        .btn-accent:hover { background: var(--accent-hover); }
+
+        .main-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
+        @media (max-width: 1000px) { .main-layout { grid-template-columns: 1fr; } }
+
+        .card { background-color: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .card h2 { font-size: 1.1rem; margin-bottom: 16px; border-bottom: 1px solid var(--card-border); padding-bottom: 8px; color: var(--accent); }
+
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
+        input, select { width: 100%; background: var(--bg-color); border: 1px solid var(--card-border); color: var(--text-main); padding: 8px 12px; border-radius: 6px; font-size: 0.95rem; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+        .weapon-row { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; margin-bottom: 6px; border: 1px solid var(--card-border); }
+        .teammate-row { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 1px solid var(--card-border); }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-bottom: 4px; }
+        .badge.party { background: rgba(16, 185, 129, 0.2); color: var(--party-color); }
+        .badge.random { background: rgba(148, 163, 184, 0.2); color: var(--random-color); }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .kpi-box { background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); padding: 12px; border-radius: 8px; text-align: center; }
+        .kpi-box .val { font-size: 1.25rem; font-weight: bold; color: var(--accent); }
+        .kpi-box .lbl { font-size: 0.75rem; color: var(--text-muted); }
+
+        .filter-section { margin-bottom: 12px; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; max-height: 130px; overflow-y: auto; padding-right: 4px; }
+        .checkbox-label { display: inline-flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; border: 1px solid var(--card-border); }
+        .checkbox-label input { width: auto; }
+
+        .analytics-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 8px; }
+        .analytics-table th, .analytics-table td { border: 1px solid var(--card-border); padding: 8px 12px; text-align: left; }
+        .analytics-table th { background: rgba(0,0,0,0.3); color: var(--accent); font-size: 0.85rem; }
+        .analytics-table td { background: rgba(0,0,0,0.1); }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; }
+        .modal-content { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; padding: 24px; position: relative; }
+        .modal-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+        .modal-close:hover { color: var(--text-main); }
+
+        .match-item { background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .match-info div { font-size: 0.85rem; color: var(--text-muted); }
+        .match-info .match-title { font-size: 1rem; font-weight: bold; color: var(--text-main); }
+        .match-stats { text-align: right; font-size: 0.9rem; }
+        .btn-danger { background: rgba(244, 63, 94, 0.2); color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+        .btn-danger:hover { background: var(--danger); color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CoD Stats & Analytics Tracker (Master Edition)</h1>
+            <div class="header-actions">
+                <button class="btn-accent" onclick="openModal()">➕ 新規マッチ登録</button>
+                <button onclick="exportJSON()">JSON出力</button>
+                <button onclick="document.getElementById('importFile').click()">JSONインポート</button>
+                <input type="file" id="importFile" style="display:none" accept=".json" onchange="importJSON(event)">
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- 左側：フィルターパネル -->
+            <div>
+                <div class="card">
+                    <h2>フィルタリング設定</h2>
+                    <div class="row" style="margin-bottom: 10px;">
+                        <div class="form-group">
+                            <label>検索ロジック</label>
+                            <select id="filterLogic" onchange="renderDashboard()">
+                                <option value="AND">AND (すべて満たす)</option>
+                                <option value="OR">OR (いずれか満たす)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>直近の試合数</label>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <select id="filterRecent" onchange="toggleRecentCustom(); renderDashboard();" style="flex: 1;">
+                                    <option value="0">制限なし</option>
+                                    <option value="5">直近 5試合</option>
+                                    <option value="10">直近 10試合</option>
+                                    <option value="20">直近 20試合</option>
+                                    <option value="50">直近 50試合</option>
+                                    <option value="custom">カスタム...</option>
+                                </select>
+                                <input type="number" id="filterRecentCustom" min="1" value="15" placeholder="試合数" style="display: none; width: 70px;" oninput="renderDashboard()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>期間フィルター</label>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <select id="filterPeriod" onchange="togglePeriodCustom(); renderDashboard();" style="flex: 1;">
+                                <option value="all">全期間</option>
+                                <option value="today">今日</option>
+                                <option value="24h">過去24時間</option>
+                                <option value="3d">過去3日間</option>
+                                <option value="7d">過去7日間</option>
+                                <option value="30d">過去30日間</option>
+                                <option value="custom">カスタム...</option>
+                            </select>
+                            <input type="number" id="filterPeriodCustom" min="1" value="14" placeholder="日数" style="display: none; width: 70px;" oninput="renderDashboard()">
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <label>大枠</label>
+                        <div class="checkbox-group" id="filterCategoryGroup">
+                            <label class="checkbox-label"><input type="checkbox" value="public" checked onchange="renderDashboard()"> 通常・ランク</label>
+                            <label class="checkbox-label"><input type="checkbox" value="scrim" checked onchange="renderDashboard()"> スクリム</label>
+                            <label class="checkbox-label"><input type="checkbox" value="custom" checked onchange="renderDashboard()"> カスタム</label>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <label>モード</label>
+                        <div class="checkbox-group" id="filterModeGroup">
+                            <label class="checkbox-label"><input type="checkbox" value="br" checked onchange="renderDashboard()"> BR</label>
+                            <label class="checkbox-label"><input type="checkbox" value="resurgence" checked onchange="renderDashboard()"> リサージェンス</label>
+                            <label class="checkbox-label"><input type="checkbox" value="ranked_resurgence" checked onchange="renderDashboard()"> ランクリサ</label>
+                            <label class="checkbox-label"><input type="checkbox" value="ranked_br" checked onchange="renderDashboard()"> ランクBR</label>
+                            <label class="checkbox-label"><input type="checkbox" value="scrim_br" checked onchange="renderDashboard()"> スクリムBR</label>
+                            <label class="checkbox-label"><input type="checkbox" value="scrim_resurgence" checked onchange="renderDashboard()"> スクリムリサ</label>
+                            <label class="checkbox-label"><input type="checkbox" value="custom_br" checked onchange="renderDashboard()"> カスタムBR</label>
+                            <label class="checkbox-label"><input type="checkbox" value="custom_resurgence" checked onchange="renderDashboard()"> カスタムリサ</label>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <label>マップ</label>
+                        <div class="checkbox-group" id="filterMapGroup">
+                            <label class="checkbox-label"><input type="checkbox" value="HAJIN" checked onchange="renderDashboard()"> HAJIN</label>
+                            <label class="checkbox-label"><input type="checkbox" value="Verdansk" checked onchange="renderDashboard()"> Verdansk</label>
+                            <label class="checkbox-label"><input type="checkbox" value="Reverse Island" checked onchange="renderDashboard()"> Reverse Island</label>
+                            <label class="checkbox-label"><input type="checkbox" value="Vondel" checked onchange="renderDashboard()"> Vondel</label>
+                            <label class="checkbox-label"><input type="checkbox" value="zodiac" checked onchange="renderDashboard()"> zodiac</label>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <label>チーム人数</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label"><input type="checkbox" value="solo" checked onchange="renderDashboard()"> ソロ</label>
+                            <label class="checkbox-label"><input type="checkbox" value="trio" checked onchange="renderDashboard()"> トリオ</label>
+                            <label class="checkbox-label"><input type="checkbox" value="squad" checked onchange="renderDashboard()"> スクワッド</label>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <label>パーティ状況</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label"><input type="checkbox" value="solo_queue" checked onchange="renderDashboard()"> 1人 (野良)</label>
+                            <label class="checkbox-label"><input type="checkbox" value="partial_party" checked onchange="renderDashboard()"> 一部パーティ</label>
+                            <label class="checkbox-label"><input type="checkbox" value="full_party" checked onchange="renderDashboard()"> フルパ</label>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <label>順位フィルター</label>
+                        <select id="filterPlacement" onchange="renderDashboard()">
+                            <option value="all">すべての順位</option>
+                            <option value="win">1位 (勝利) のみ</option>
+                            <option value="top3">TOP 3 以内</option>
+                            <option value="top5">TOP 5 以内</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-section">
+                        <label>最小 K/D フィルター</label>
+                        <select id="filterMinKD" onchange="renderDashboard()">
+                            <option value="0">制限なし</option>
+                            <option value="1">K/D 1.0 以上</option>
+                            <option value="2">K/D 2.0 以上</option>
+                            <option value="3">K/D 3.0 以上</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：統計ダッシュボード & 分析 -->
+            <div>
+                <div class="card">
+                    <h2>統計ダッシュボード</h2>
+                    <div class="kpi-grid" id="kpiGrid"></div>
+
+                    <h3 style="font-size: 0.95rem; color: var(--text-muted); margin: 16px 0 8px 0;">パーティ vs 野良 貢献度比較</h3>
+                    <div class="kpi-grid" id="comparisonGrid"></div>
+                </div>
+
+                <div class="card">
+                    <h2>マップ別パフォーマンス分析</h2>
+                    <div style="overflow-x: auto;">
+                        <table class="analytics-table" id="mapAnalyticsTable">
+                            <thead>
+                                <tr>
+                                    <th>マップ名</th>
+                                    <th>試合数</th>
+                                    <th>勝率 (1位率)</th>
+                                    <th>平均順位</th>
+                                    <th>平均Dmg</th>
+                                    <th>平均K/D</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>武器別パフォーマンス分析</h2>
+                    <div style="overflow-x: auto;">
+                        <table class="analytics-table" id="weaponAnalyticsTable">
+                            <thead>
+                                <tr>
+                                    <th>武器名</th>
+                                    <th>使用試合数</th>
+                                    <th>武器累計Dmg</th>
+                                    <th>平均武器Dmg</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>登録履歴</h2>
+                    <div id="matchHistoryList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダルウィンドウ：マッチ登録フォーム -->
+    <div class="modal-overlay" id="matchModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <h2 style="margin-bottom: 16px; color: var(--accent);">新規マッチ登録</h2>
+            <form id="matchForm" onsubmit="saveMatch(event)">
+                <div class="form-group">
+                    <label>プレイ日時（任意）</label>
+                    <input type="datetime-local" id="inputDate">
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label>大枠</label>
+                        <select id="inputCategory" onchange="updateFormModes()">
+                            <option value="public">通常・ランク</option>
+                            <option value="scrim">スクリム</option>
+                            <option value="custom">カスタム</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>モード</label>
+                        <select id="inputMode" onchange="updateFormMaps()"></select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label>マップ</label>
+                        <select id="inputMap"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>チーム順位</label>
+                        <input type="number" id="inputPlacement" min="1" required placeholder="例: 1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>降下ロケーション（任意）</label>
+                    <input type="text" id="inputLocation" placeholder="例: Control Center">
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label>チーム人数</label>
+                        <select id="inputTeamSize" onchange="updatePartyAndTeammates()">
+                            <option value="solo">ソロ</option>
+                            <option value="trio">トリオ</option>
+                            <option value="squad" selected>スクワッド</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>パーティ状況</label>
+                        <select id="inputPartyType" onchange="updatePartyAndTeammates()">
+                            <option value="solo_queue">1人 (野良)</option>
+                            <option value="partial_party" selected>一部パーティ</option>
+                            <option value="full_party">フルパ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="randomsCountGroup">
+                    <label>野良の人数</label>
+                    <select id="inputRandomsCount" onchange="updateTeammateRows()">
+                        <option value="1">野良 1人</option>
+                        <option value="2">野良 2人</option>
+                    </select>
+                </div>
+
+                <div class="card" style="background: rgba(0,0,0,0.2); padding: 12px; margin-top: 12px;">
+                    <label style="font-weight: bold; color: var(--accent); margin-bottom: 8px;">自分のスタッツ</label>
+                    <div class="row-3" style="margin-bottom: 10px;">
+                        <div class="form-group"><label>合計ダメージ</label><input type="number" id="myDmg" required placeholder="0"></div>
+                        <div class="form-group"><label>キル数</label><input type="number" id="myKills" required placeholder="0" oninput="calcMyKD()"></div>
+                        <div class="form-group"><label>デス数</label><input type="number" id="myDeaths" required placeholder="0" oninput="calcMyKD()"></div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); text-align: right; margin-bottom: 10px;">自動計算 K/D: <span id="myKDPreview" style="color: var(--accent); font-weight: bold;">0.00</span></div>
+
+                    <label style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px;">使用武器 & 武器別ダメージ（任意）</label>
+                    <div class="weapon-row">
+                        <div class="row">
+                            <input type="text" id="weapon1Name" placeholder="武器名1 (例: RAM-7)" style="font-size: 0.85rem;">
+                            <input type="number" id="weapon1Dmg" placeholder="ダメージ1" style="font-size: 0.85rem;">
+                        </div>
+                    </div>
+                    <div class="weapon-row">
+                        <div class="row">
+                            <input type="text" id="weapon2Name" placeholder="武器名2 (例: HRM-9)" style="font-size: 0.85rem;">
+                            <input type="number" id="weapon2Dmg" placeholder="ダメージ2" style="font-size: 0.85rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="teammatesSection" style="margin-top: 12px;">
+                    <label style="font-weight: bold; color: var(--text-muted); margin-bottom: 6px;">味方のスタッツ（任意）</label>
+                    <div id="teammatesContainer"></div>
+                </div>
+
+                <button type="submit" class="btn-accent" style="width: 100%; padding: 12px; margin-top: 12px;">戦績を登録して閉じる</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const MODES_DEF = {
+            public: [
+                { id: "br", label: "バトルロワイヤル", type: "br" },
+                { id: "resurgence", label: "リサージェンス", type: "resurgence" },
+                { id: "ranked_resurgence", label: "ランクリサージェンス", type: "resurgence" },
+                { id: "ranked_br", label: "ランクバトルロワイヤル", type: "br" }
+            ],
+            scrim: [
+                { id: "scrim_br", label: "スクリム (BR)", type: "br" },
+                { id: "scrim_resurgence", label: "スクリム (リサージェンス)", type: "resurgence" }
+            ],
+            custom: [
+                { id: "custom_br", label: "カスタム (BR)", type: "br" },
+                { id: "custom_resurgence", label: "カスタム (リサージェンス)", type: "resurgence" }
+            ]
+        };
+
+        const MAPS_DEF = {
+            br: ["HAJIN", "Verdansk"],
+            resurgence: ["Reverse Island", "Vondel", "zodiac"]
+        };
+
+        let db;
+        let matchesData = [];
+        const overlayChannel = new BroadcastChannel('cod_stats_channel');
+
+        const request = indexedDB.open("CoD_Stats_DB", 1);
+        request.onerror = e => console.error("IndexedDB error:", e);
+        request.onsuccess = e => {
+            db = e.target.result;
+            loadMatches();
+        };
+        request.onupgradeneeded = e => {
+            db = e.target.result;
+            if (!db.objectStoreNames.contains("matches")) {
+                db.createObjectStore("matches", { keyPath: "id" });
+            }
+        };
+
+        function toggleRecentCustom() {
+            const val = document.getElementById("filterRecent").value;
+            const input = document.getElementById("filterRecentCustom");
+            input.style.display = (val === "custom") ? "inline-block" : "none";
+        }
+
+        function togglePeriodCustom() {
+            const val = document.getElementById("filterPeriod").value;
+            const input = document.getElementById("filterPeriodCustom");
+            input.style.display = (val === "custom") ? "inline-block" : "none";
+        }
+
+        function openModal() {
+            document.getElementById("matchModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("matchModal").style.display = "none";
+        }
+
+        function updateFormModes() {
+            const cat = document.getElementById("inputCategory").value;
+            const modeSelect = document.getElementById("inputMode");
+            modeSelect.innerHTML = "";
+            MODES_DEF[cat].forEach(m => {
+                const opt = document.createElement("option");
+                opt.value = m.id;
+                opt.textContent = m.label;
+                modeSelect.appendChild(opt);
+            });
+            updateFormMaps();
+        }
+
+        function updateFormMaps() {
+            const cat = document.getElementById("inputCategory").value;
+            const modeId = document.getElementById("inputMode").value;
+            const modeObj = MODES_DEF[cat].find(m => m.id === modeId);
+            const mapSelect = document.getElementById("inputMap");
+            mapSelect.innerHTML = "";
+            
+            if (modeObj) {
+                const maps = MAPS_DEF[modeObj.type];
+                maps.forEach(map => {
+                    const opt = document.createElement("option");
+                    opt.value = map;
+                    opt.textContent = map;
+                    mapSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function updatePartyAndTeammates() {
+            const teamSize = document.getElementById("inputTeamSize").value;
+            const partyType = document.getElementById("inputPartyType").value;
+            const randomGroup = document.getElementById("randomsCountGroup");
+            const randomSelect = document.getElementById("inputRandomsCount");
+
+            if (teamSize === "solo") {
+                document.getElementById("inputPartyType").value = "solo_queue";
+                document.getElementById("inputPartyType").disabled = true;
+                randomGroup.style.display = "none";
+            } else {
+                document.getElementById("inputPartyType").disabled = false;
+            }
+
+            if (partyType === "partial_party" && teamSize !== "solo") {
+                randomGroup.style.display = "block";
+                randomSelect.innerHTML = "";
+                let maxR = (teamSize === "trio") ? 1 : 2;
+                for(let i=1; i<=maxR; i++) {
+                    let opt = document.createElement("option");
+                    opt.value = i;
+                    opt.textContent = `野良 ${i} 人`;
+                    randomSelect.appendChild(opt);
+                }
+            } else {
+                randomGroup.style.display = "none";
+            }
+            updateTeammateRows();
+        }
+
+        function updateTeammateRows() {
+            const teamSize = document.getElementById("inputTeamSize").value;
+            const partyType = document.getElementById("inputPartyType").value;
+            const randomsCount = parseInt(document.getElementById("inputRandomsCount").value || "0", 10);
+            const container = document.getElementById("teammatesContainer");
+            container.innerHTML = "";
+
+            if (teamSize === "solo") return;
+
+            let totalTeammates = (teamSize === "trio") ? 2 : 3;
+            let partyCount = 0;
+            if (partyType === "full_party") partyCount = totalTeammates;
+            else if (partyType === "partial_party") partyCount = totalTeammates - randomsCount;
+
+            for (let i = 0; i < totalTeammates; i++) {
+                const isParty = i < partyCount;
+                const role = isParty ? "party" : "random";
+                const label = isParty ? "🟢 パーティメンバー" : "⚪ 野良プレイヤー";
+                const badgeClass = isParty ? "party" : "random";
+
+                const row = document.createElement("div");
+                row.className = "teammate-row";
+                row.innerHTML = `
+                    <div class="badge ${badgeClass}">${label}</div>
+                    <input type="hidden" class="tm-role" value="${role}">
+                    <div class="row" style="margin-bottom:6px;">
+                        <input type="text" class="tm-name" placeholder="名前 (任意)">
+                        <input type="number" class="tm-dmg" placeholder="ダメージ">
+                    </div>
+                    <div class="row">
+                        <input type="number" class="tm-kills" placeholder="キル" oninput="calcTmKD(this)">
+                        <input type="number" class="tm-deaths" placeholder="デス" oninput="calcTmKD(this)">
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right; margin-top: 4px;">K/D: <span class="tm-kd">0.00</span></div>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        function calculateKD(k, d) {
+            const kills = Number(k) || 0;
+            const deaths = Number(d) || 0;
+            if (deaths === 0) return Number(kills.toFixed(2));
+            return Number((kills / deaths).toFixed(2));
+        }
+
+        function calcMyKD() {
+            const k = document.getElementById("myKills").value;
+            const d = document.getElementById("myDeaths").value;
+            document.getElementById("myKDPreview").textContent = calculateKD(k, d).toFixed(2);
+        }
+
+        function calcTmKD(element) {
+            const row = element.closest(".teammate-row");
+            const k = row.querySelector(".tm-kills").value;
+            const d = row.querySelector(".tm-deaths").value;
+            row.querySelector(".tm-kd").textContent = calculateKD(k, d).toFixed(2);
+        }
+
+        function saveMatch(e) {
+            e.preventDefault();
+            const dateVal = document.getElementById("inputDate").value;
+            const timestamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+
+            const category = document.getElementById("inputCategory").value;
+            const mode = document.getElementById("inputMode").value;
+            const map = document.getElementById("inputMap").value;
+            const location = document.getElementById("inputLocation").value.trim();
+            const placement = parseInt(document.getElementById("inputPlacement").value, 10);
+            const teamSize = document.getElementById("inputTeamSize").value;
+            const partyType = document.getElementById("inputPartyType").value;
+            const randomsCount = (partyType === "partial_party") ? parseInt(document.getElementById("inputRandomsCount").value, 10) : (partyType === "full_party" ? 0 : (teamSize === "solo" ? 0 : (teamSize === "trio" ? 2 : 3)));
+
+            const myDmg = Number(document.getElementById("myDmg").value) || 0;
+            const myKills = Number(document.getElementById("myKills").value) || 0;
+            const myDeaths = Number(document.getElementById("myDeaths").value) || 0;
+
+            const weapons = [];
+            const w1Name = document.getElementById("weapon1Name").value.trim();
+            const w1Dmg = document.getElementById("weapon1Dmg").value;
+            if (w1Name || w1Dmg !== "") {
+                weapons.push({ name: w1Name || "武器1", damage: Number(w1Dmg) || 0 });
+            }
+            const w2Name = document.getElementById("weapon2Name").value.trim();
+            const w2Dmg = document.getElementById("weapon2Dmg").value;
+            if (w2Name || w2Dmg !== "") {
+                weapons.push({ name: w2Name || "武器2", damage: Number(w2Dmg) || 0 });
+            }
+
+            const teammates = [];
+            document.querySelectorAll(".teammate-row").forEach(row => {
+                const role = row.querySelector(".tm-role").value;
+                const name = row.querySelector(".tm-name").value || (role === "party" ? "フレンド" : "野良");
+                const dmg = row.querySelector(".tm-dmg").value !== "" ? Number(row.querySelector(".tm-dmg").value) : null;
+                const kills = row.querySelector(".tm-kills").value !== "" ? Number(row.querySelector(".tm-kills").value) : null;
+                const deaths = row.querySelector(".tm-deaths").value !== "" ? Number(row.querySelector(".tm-deaths").value) : null;
+                const kd = (kills !== null && deaths !== null) ? calculateKD(kills, deaths) : 0;
+
+                teammates.push({ role, name, damage: dmg, kills, deaths, kd });
+            });
+
+            const matchRecord = {
+                id: crypto.randomUUID(),
+                timestamp,
+                category,
+                mode,
+                map,
+                location: location || "未設定",
+                placement,
+                teamSize,
+                partyType,
+                randomsCount,
+                myStats: {
+                    damage: myDmg,
+                    kills: myKills,
+                    deaths: myDeaths,
+                    kd: calculateKD(myKills, myDeaths),
+                    weapons
+                },
+                teammates
+            };
+
+            const tx = db.transaction("matches", "readwrite");
+            tx.objectStore("matches").add(matchRecord);
+            tx.oncomplete = () => {
+                document.getElementById("matchForm").reset();
+                document.getElementById("inputDate").value = "";
+                updateFormModes();
+                closeModal();
+                loadMatches();
+            };
+        }
+
+        function loadMatches() {
+            const tx = db.transaction("matches", "readonly");
+            const store = tx.objectStore("matches");
+            const req = store.getAll();
+            req.onsuccess = () => {
+                matchesData = req.result;
+                renderDashboard();
+            };
+        }
+
+        function deleteMatch(id) {
+            if (!confirm("この試合記録を削除しますか？")) return;
+            const tx = db.transaction("matches", "readwrite");
+            tx.objectStore("matches").delete(id);
+            tx.oncomplete = () => loadMatches();
+        }
+
+        function renderDashboard() {
+            const logic = document.getElementById("filterLogic").value;
+            let recentLimit = parseInt(document.getElementById("filterRecent").value, 10);
+            if (document.getElementById("filterRecent").value === "custom") {
+                recentLimit = parseInt(document.getElementById("filterRecentCustom").value, 10) || 0;
+            }
+
+            const period = document.getElementById("filterPeriod").value;
+            const placementFilter = document.getElementById("filterPlacement").value;
+            const minKDFilter = parseFloat(document.getElementById("filterMinKD").value);
+
+            const checkedCategories = Array.from(document.querySelectorAll('#filterCategoryGroup input:checked')).map(cb => cb.value);
+            const checkedModes = Array.from(document.querySelectorAll('#filterModeGroup input:checked')).map(cb => cb.value);
+            const checkedMaps = Array.from(document.querySelectorAll('#filterMapGroup input:checked')).map(cb => cb.value);
+            const checkedTeamSizes = Array.from(document.querySelectorAll('.filter-section input[value="solo"]:checked, .filter-section input[value="trio"]:checked, .filter-section input[value="squad"]:checked')).map(cb => cb.value);
+            const checkedPartyTypes = Array.from(document.querySelectorAll('.filter-section input[value="solo_queue"]:checked, .filter-section input[value="partial_party"]:checked, .filter-section input[value="full_party"]:checked')).map(cb => cb.value);
+
+            const now = Date.now();
+            const DAY = 24 * 60 * 60 * 1000;
+
+            let filtered = matchesData.filter(m => {
+                if (period === "today") {
+                    const todayStart = new Date().setHours(0,0,0,0);
+                    if (m.timestamp < todayStart) return false;
+                } else if (period === "24h" && (now - m.timestamp > DAY)) return false;
+                  else if (period === "3d" && (now - m.timestamp > 3 * DAY)) return false;
+                  else if (period === "7d" && (now - m.timestamp > 7 * DAY)) return false;
+                  else if (period === "30d" && (now - m.timestamp > 30 * DAY)) return false;
+                  else if (period === "custom") {
+                      const customDays = parseInt(document.getElementById("filterPeriodCustom").value, 10) || 0;
+                      if (now - m.timestamp > customDays * DAY) return false;
+                  }
+
+                if (placementFilter === "win" && m.placement !== 1) return false;
+                if (placementFilter === "top3" && m.placement > 3) return false;
+                if (placementFilter === "top5" && m.placement > 5) return false;
+
+                if (m.myStats.kd < minKDFilter) return false;
+
+                const conds = [
+                    checkedCategories.includes(m.category),
+                    checkedModes.includes(m.mode),
+                    checkedMaps.includes(m.map),
+                    checkedTeamSizes.includes(m.teamSize),
+                    checkedPartyTypes.includes(m.partyType)
+                ];
+
+                if (logic === "AND") return conds.every(Boolean);
+                return conds.some(Boolean);
+            });
+
+            filtered.sort((a, b) => b.timestamp - a.timestamp);
+
+            if (recentLimit > 0) {
+                filtered = filtered.slice(0, recentLimit);
+            }
+
+            const totalMatches = filtered.length;
+            let wins = 0, top3 = 0, totalPlacement = 0;
+            let totalDmg = 0, totalKills = 0, totalDeaths = 0, sumKD = 0;
+
+            let partyStats = { count: 0, dmg: 0, kills: 0, sumKD: 0 };
+            let randomStats = { count: 0, dmg: 0, kills: 0, sumKD: 0 };
+
+            let mapStats = {};
+            let weaponStats = {};
+
+            filtered.forEach(m => {
+                if (m.placement === 1) wins++;
+                if (m.placement <= 3) top3++;
+                totalPlacement += m.placement;
+
+                totalDmg += m.myStats.damage;
+                totalKills += m.myStats.kills;
+                totalDeaths += m.myStats.deaths;
+                sumKD += m.myStats.kd;
+
+                if (!mapStats[m.map]) mapStats[m.map] = { count: 0, wins: 0, placement: 0, dmg: 0, sumKD: 0 };
+                mapStats[m.map].count++;
+                if (m.placement === 1) mapStats[m.map].wins++;
+                mapStats[m.map].placement += m.placement;
+                mapStats[m.map].dmg += m.myStats.damage;
+                mapStats[m.map].sumKD += m.myStats.kd;
+
+                if (m.myStats.weapons) {
+                    m.myStats.weapons.forEach(w => {
+                        if (!w.name) return;
+                        if (!weaponStats[w.name]) weaponStats[w.name] = { count: 0, dmg: 0 };
+                        weaponStats[w.name].count++;
+                        weaponStats[w.name].dmg += w.damage;
+                    });
+                }
+
+                if (Array.isArray(m.teammates)) {
+                    m.teammates.forEach(tm => {
+                        const target = (tm.role === "party") ? partyStats : randomStats;
+                        if (tm.damage !== null || tm.kills !== null) {
+                            target.count++;
+                            target.dmg += tm.damage || 0;
+                            target.kills += tm.kills || 0;
+                            target.sumKD += tm.kd || 0;
+                        }
+                    });
+                }
+            });
+
+            const winRate = totalMatches ? ((wins / totalMatches) * 100).toFixed(1) : "0.0";
+            const top3Rate = totalMatches ? ((top3 / totalMatches) * 100).toFixed(1) : "0.0";
+            const avgPlacement = totalMatches ? (totalPlacement / totalMatches).toFixed(2) : "-";
+            const avgDmg = totalMatches ? Math.round(totalDmg / totalMatches).toLocaleString() : 0;
+            const avgKills = totalMatches ? (totalKills / totalMatches).toFixed(1) : "0.0";
+            const avgDeaths = totalMatches ? (totalDeaths / totalMatches).toFixed(1) : "0.0";
+            const overallKD = totalDeaths > 0 ? (totalKills / totalDeaths).toFixed(2) : totalKills.toFixed(2);
+            const avgMatchKD = totalMatches ? (sumKD / totalMatches).toFixed(2) : "0.00";
+
+            // メインダッシュボード KPI描画
+            document.getElementById("kpiGrid").innerHTML = `
+                <div class="kpi-box"><div class="val">${totalMatches}</div><div class="lbl">総試合数</div></div>
+                <div class="kpi-box"><div class="val">${winRate}%</div><div class="lbl">勝率 (1位率)</div></div>
+                <div class="kpi-box"><div class="val">${top3Rate}%</div><div class="lbl">TOP3率</div></div>
+                <div class="kpi-box"><div class="val">${avgPlacement}</div><div class="lbl">平均順位</div></div>
+                <div class="kpi-box"><div class="val">${avgDmg}</div><div class="lbl">平均ダメージ</div></div>
+                <div class="kpi-box"><div class="val">${totalKills.toLocaleString()}</div><div class="lbl">累計キル数</div></div>
+                <div class="kpi-box"><div class="val">${overallKD}</div><div class="lbl">総合 K/D</div></div>
+                <div class="kpi-box"><div class="val">${avgMatchKD}</div><div class="lbl">平均 K/D</div></div>
+            `;
+
+            // OBSオーバーレイファイルへのデータ同期 (BroadcastChannel & localStorage)
+            const liveStatsPayload = {
+                type: 'UPDATE_STATS',
+                stats: {
+                    totalMatches,
+                    avgDmg: String(avgDmg),
+                    avgPlacement: String(avgPlacement),
+                    avgKills: String(avgKills),
+                    avgDeaths: String(avgDeaths),
+                    overallKD: String(overallKD),
+                    filterDesc: `直近:${recentLimit || '無制限'} / 期間:${period}`
+                }
+            };
+            overlayChannel.postMessage(liveStatsPayload);
+            try {
+                localStorage.setItem('cod_latest_stats', JSON.stringify(liveStatsPayload.stats));
+            } catch(e) {}
+
+            const pAvgDmg = partyStats.count ? Math.round(partyStats.dmg / partyStats.count).toLocaleString() : "-";
+            const pAvgKD = partyStats.count ? (partyStats.sumKD / partyStats.count).toFixed(2) : "-";
+            const rAvgDmg = randomStats.count ? Math.round(randomStats.dmg / randomStats.count).toLocaleString() : "-";
+            const rAvgKD = randomStats.count ? (randomStats.sumKD / randomStats.count).toFixed(2) : "-";
+
+            document.getElementById("comparisonGrid").innerHTML = `
+                <div class="kpi-box" style="border-color: var(--party-color);"><div class="val" style="color: var(--party-color);">${pAvgDmg}</div><div class="lbl">パーティ平均Dmg</div></div>
+                <div class="kpi-box" style="border-color: var(--party-color);"><div class="val" style="color: var(--party-color);">${pAvgKD}</div><div class="lbl">パーティ平均K/D</div></div>
+                <div class="kpi-box" style="border-color: var(--random-color);"><div class="val" style="color: var(--random-color);">${rAvgDmg}</div><div class="lbl">野良平均Dmg</div></div>
+                <div class="kpi-box" style="border-color: var(--random-color);"><div class="val" style="color: var(--random-color);">${rAvgKD}</div><div class="lbl">野良平均K/D</div></div>
+            `;
+
+            const mapTableBody = document.querySelector("#mapAnalyticsTable tbody");
+            mapTableBody.innerHTML = "";
+            const mapKeys = Object.keys(mapStats);
+            if (mapKeys.length === 0) {
+                mapTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">データなし</td></tr>`;
+            } else {
+                mapKeys.forEach(mapName => {
+                    const st = mapStats[mapName];
+                    const mWinRate = ((st.wins / st.count) * 100).toFixed(1);
+                    const mAvgPl = (st.placement / st.count).toFixed(1);
+                    const mAvgDmg = Math.round(st.dmg / st.count).toLocaleString();
+                    const mAvgKD = (st.sumKD / st.count).toFixed(2);
+                    mapTableBody.innerHTML += `
+                        <tr>
+                            <td><strong>${mapName}</strong></td>
+                            <td>${st.count}回</td>
+                            <td>${mWinRate}% (${st.wins}勝)</td>
+                            <td>${mAvgPl}位</td>
+                            <td>${mAvgDmg}</td>
+                            <td>${mAvgKD}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const weaponTableBody = document.querySelector("#weaponAnalyticsTable tbody");
+            weaponTableBody.innerHTML = "";
+            const weaponKeys = Object.keys(weaponStats);
+            if (weaponKeys.length === 0) {
+                weaponTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">データなし</td></tr>`;
+            } else {
+                weaponKeys.forEach(wName => {
+                    const wst = weaponStats[wName];
+                    const wAvgDmg = Math.round(wst.dmg / wst.count).toLocaleString();
+                    weaponTableBody.innerHTML += `
+                        <tr>
+                            <td><strong>${wName}</strong></td>
+                            <td>${wst.count}試合</td>
+                            <td>${wst.dmg.toLocaleString()} dmg</td>
+                            <td>${wAvgDmg} dmg</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const historyList = document.getElementById("matchHistoryList");
+            historyList.innerHTML = "";
+            if (filtered.length === 0) {
+                historyList.innerHTML = `<div style="text-align:center; color: var(--text-muted); padding: 20px;">条件に一致する試合記録はありません</div>`;
+                return;
+            }
+
+            filtered.forEach(m => {
+                const dateStr = new Date(m.timestamp).toLocaleString("ja-JP", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                const locText = m.location && m.location !== "未設定" ? `📍 ${m.location}` : "";
+                
+                let weaponsText = "";
+                if (m.myStats.weapons && m.myStats.weapons.length > 0) {
+                    weaponsText = m.myStats.weapons.map(w => `${w.name}: ${w.damage}dmg`).join(" / ");
+                }
+
+                const el = document.createElement("div");
+                el.className = "match-item";
+                el.innerHTML = `
+                    <div class="match-info">
+                        <div class="match-title">${m.map} <span style="font-size:0.8rem; font-weight:normal; color:var(--accent);">[${m.mode}]</span> ${locText ? `<span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal; margin-left:6px;">(${locText})</span>` : ""}</div>
+                        <div>${dateStr} / 順位: <strong>${m.placement}位</strong> / ${m.teamSize} (${m.partyType})</div>
+                        ${weaponsText ? `<div style="font-size:0.75rem; color:var(--accent); margin-top:2px;">🔫 ${weaponsText}</div>` : ""}
+                    </div>
+                    <div class="match-stats">
+                        <div>Dmg: <strong>${m.myStats.damage.toLocaleString()}</strong> | K/D: <strong>${m.myStats.kd.toFixed(2)}</strong> (${m.myStats.kills}/${m.myStats.deaths})</div>
+                        <button class="btn-danger" onclick="deleteMatch('${m.id}')" style="margin-top:4px;">削除</button>
+                    </div>
+                `;
+                historyList.appendChild(el);
+            });
+        }
+
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(matchesData, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `cod_stats_master_backup_${Date.now()}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+
+        function importJSON(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if (Array.isArray(imported)) {
+                        const tx = db.transaction("matches", "readwrite");
+                        const store = tx.objectStore("matches");
+                        imported.forEach(item => store.put(item));
+                        tx.oncomplete = () => {
+                            alert("データのインポートが完了しました！");
+                            loadMatches();
+                        };
+                    } else {
+                        alert("有効なJSONファイルではありません。");
+                    }
+                } catch(err) {
+                    alert("ファイルの読み込みに失敗しました。");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        updateFormModes();
+        updatePartyAndTeammates();
+    </script>
+</body>
+</html>
