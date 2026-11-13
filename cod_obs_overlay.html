@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoD Stats OBS Overlay</title>
+    <style>
+        :root {
+            --bg-color: rgba(15, 23, 42, 0.85);
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: transparent; color: var(--text-main); padding: 10px; }
+        .obs-container {
+            width: 520px;
+            background: var(--bg-color);
+            backdrop-filter: blur(8px);
+            border: 2px solid var(--accent);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        }
+        .obs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 8px;
+        }
+        .obs-title { font-size: 1rem; font-weight: bold; color: var(--accent); display: flex; align-items: center; gap: 6px; }
+        .obs-filter-summary { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--card-border); }
+        .obs-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .obs-box {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 4px;
+            text-align: center;
+        }
+        .obs-box .val {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-top: 2px;
+        }
+        .obs-box .lbl {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="obs-container">
+        <div class="obs-header">
+            <div class="obs-title">📺 CoD Live Stats Overlay</div>
+            <div style="font-size: 0.75rem; color: #10b981; background: rgba(16, 185, 129, 0.2); padding: 2px 6px; border-radius: 4px;" id="statusBadge">LIVE</div>
+        </div>
+        <div class="obs-filter-summary" id="obsFilterSummary">条件: すべての条件 (同期待機中...)</div>
+        <div class="obs-grid">
+            <div class="obs-box">
+                <div class="lbl">平均Dmg</div>
+                <div class="val" id="obsAvgDmg">-</div>
+            </div>
+            <div class="obs-box">
+                <div class="lbl">平均順位</div>
+                <div class="val" id="obsAvgPlacement">-</div>
+            </div>
+            <div class="obs-box">
+                <div class="lbl">平均キル</div>
+                <div class="val" id="obsAvgKills">-</div>
+            </div>
+            <div class="obs-box">
+                <div class="lbl">平均デス</div>
+                <div class="val" id="obsAvgDeaths">-</div>
+            </div>
+            <div class="obs-box">
+                <div class="lbl">平均 K/D</div>
+                <div class="val" id="obsAvgKD">-</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const channel = new BroadcastChannel('cod_stats_channel');
+
+        channel.onmessage = function (event) {
+            if (event.data && event.data.type === 'UPDATE_STATS') {
+                renderOverlay(event.data.stats);
+            }
+        };
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'cod_latest_stats') {
+                try {
+                    const stats = JSON.parse(e.newValue);
+                    renderOverlay(stats);
+                } catch(err) {}
+            }
+        });
+
+        function renderOverlay(stats) {
+            if (!stats) return;
+            document.getElementById("obsAvgDmg").textContent = stats.avgDmg;
+            document.getElementById("obsAvgPlacement").textContent = stats.avgPlacement;
+            document.getElementById("obsAvgKills").textContent = stats.avgKills;
+            document.getElementById("obsAvgDeaths").textContent = stats.avgDeaths;
+            document.getElementById("obsAvgKD").textContent = stats.overallKD;
+            document.getElementById("obsFilterSummary").textContent = `一致試合数: ${stats.totalMatches}試合 (${stats.filterDesc || 'フィルター適用中'})`;
+        }
+
+        try {
+            const saved = localStorage.getItem('cod_latest_stats');
+            if (saved) {
+                renderOverlay(JSON.parse(saved));
+            }
+        } catch(err) {}
+    </script>
+</body>
+</html>
